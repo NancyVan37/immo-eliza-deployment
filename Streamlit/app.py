@@ -2,139 +2,146 @@ import streamlit as st
 import pandas as pd
 import joblib
 
-# =====================================================================
-# ----------------------  PAGE CONFIG & THEME  -------------------------
-# =====================================================================
+# -----------------------------
+# Page Config (title + layout)
+# -----------------------------
 st.set_page_config(
     page_title="Immo Eliza Price Predictor",
-    layout="centered"
+    layout="centered",
 )
 
-# Light beige base + modern clean card UI
+# -----------------------------
+# Custom CSS (Navy theme)
+# -----------------------------
 st.markdown("""
 <style>
-    body {
-        background-color: #f7f2e8;
-    }
-    .main {
-        background-color: #f7f2e8;
-    }
-    .stTextInput>div>div>input {
-        background-color: #fff;
-    }
-    .stSelectbox>div>div>div {
-        background-color: #fff;
-    }
-    .card {
-        padding: 25px;
-        background-color: white;
-        border-radius: 18px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-        border: 1px solid #e6dfd3;
-        margin-top: 20px;
-    }
-    .title {
-        text-align: center;
-        font-size: 36px !important;
-        font-weight: 700 !important;
-        color: #5c5246;
-        margin-bottom: 5px;
-    }
-    .subtitle {
-        text-align: center;
-        color: #7e7468;
-        margin-bottom: 20px;
-        font-size: 17px;
-    }
-    .predict-btn button {
-        width: 100%;
-        background-color: #c9b8a6 !important;
-        color: white !important;
-        border-radius: 10px !important;
-        font-size: 18px !important;
-        padding: 10px 0px !important;
-    }
+
+body {
+    background-color: #001f3f !important;
+}
+
+[data-testid="stAppViewContainer"] {
+    background-color: #001f3f;
+}
+
+[data-testid="stSidebar"] {
+    background-color: #001933;
+}
+
+h1, h2, h3, h4, label, p, span {
+    color: #ffffff !important;
+}
+
+.stButton > button {
+    background-color: #0074D9 !important;
+    color: white !important;
+    width: 100%;
+    border-radius: 10px;
+    padding: 0.6rem;
+}
+
+.stTextInput > div > div > input,
+.stNumberInput input {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+}
+
+.stSelectbox > div > div {
+    background-color: #ffffff !important;
+    color: black !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
-# =====================================================================
-# -------------------------  LOAD MODEL  -------------------------------
-# =====================================================================
+
+# -----------------------------
+# Sidebar Navigation
+# -----------------------------
+st.sidebar.title("📌 Navigation")
+page = st.sidebar.radio(
+    "Choose a page",
+    ["🏠 Home", "🔮 Predict Price", "ℹ️ About"]
+)
+
+# -----------------------------
+# Load model
+# -----------------------------
 model = joblib.load("model.pkl")
+preprocessor = model.named_steps["preprocessor"]
 
-# Page Title
-st.markdown('<div class="title">🏠 Immo Eliza Price Predictor</div>', unsafe_allow_html=True)
-st.markdown('<div class="subtitle">Enter property details to estimate the price</div>', unsafe_allow_html=True)
-
-
-# =====================================================================
-# -------------------------  INPUT CARD  -------------------------------
-# =====================================================================
-with st.container():
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-
-    st.subheader("📌 Property Details")
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-        locality = st.text_input("Locality")
-        property_type = st.selectbox("Property Type", ["APARTMENT", "HOUSE"])
-        nbr_bedrooms = st.number_input("Bedrooms", 0, 20, 2)
-
-    with col2:
-        total_area_sqm = st.number_input("Total area (sqm)", 10, 10000, 100)
-        zip_code = st.number_input("Zip Code", 1000, 9999, 1000)
-        fl_garden = st.checkbox("Has garden?")
-
-    garden_sqm = st.number_input("Garden size (sqm)", 0, 5000, 0)
-
-    st.markdown('</div>', unsafe_allow_html=True)
-
-
-# =====================================================================
-# -----------  Extract Training Columns From Model Pipeline -----------
-# =====================================================================
-preprocessor = model.named_steps['preprocessor']
 numeric_cols = list(preprocessor.transformers_[0][2])
 categorical_cols = list(preprocessor.transformers_[1][2])
 ALL_COLUMNS = numeric_cols + categorical_cols
 
 
-# =====================================================================
-# ----------------------  BUILD INPUT ROW  -----------------------------
-# =====================================================================
-def build_input_row():
-    row = {col: None for col in ALL_COLUMNS}
+# ============================================================
+#  HOME PAGE
+# ============================================================
+if page == "🏠 Home":
+    st.title("🏠 Immo Eliza Price Predictor")
+    st.write("""
+        Welcome to the **Immo Eliza Price Predictor**.
 
-    if "locality" in row: row["locality"] = locality
-    if "property_type" in row: row["property_type"] = property_type
-    if "nbr_bedrooms" in row: row["nbr_bedrooms"] = nbr_bedrooms
-    if "total_area_sqm" in row: row["total_area_sqm"] = total_area_sqm
-    if "zip_code" in row: row["zip_code"] = zip_code
-    if "fl_garden" in row: row["fl_garden"] = fl_garden
-    if "garden_sqm" in row: row["garden_sqm"] = garden_sqm
-
-    return pd.DataFrame([row])
+        Use the sidebar to navigate to the prediction tool.
+    """)
 
 
-# =====================================================================
-# ---------------------------  PREDICT  -------------------------------
-# =====================================================================
-st.markdown('<div class="card">', unsafe_allow_html=True)
+# ============================================================
+#  PREDICT PRICE PAGE
+# ============================================================
+elif page == "🔮 Predict Price":
 
-if st.button("Predict Price", type="primary"):
-    df_input = build_input_row()
+    st.title("🔮 Predict the Property Price")
 
-    try:
-        prediction = model.predict(df_input)[0]
+    locality = st.text_input("Locality", "")
+    property_type = st.selectbox("Property Type", ["APARTMENT", "HOUSE"])
+    nbr_bedrooms = st.number_input("Number of bedrooms", 0, 20, 2)
+    total_area_sqm = st.number_input("Total area (sqm)", 10, 10000, 100)
+    zip_code = st.number_input("Zip Code", 1000, 9999, 1000)
+    fl_garden = st.checkbox("Has garden?")
+    garden_sqm = st.number_input("Garden size (sqm)", 0, 5000, 0)
 
-        st.success(f"💶 Estimated price: **€ {round(prediction):,}**")
+    def build_input_row():
+        row = {col: None for col in ALL_COLUMNS}
 
-    except Exception as e:
-        st.error(f"⚠️ Error during prediction:\n\n{e}")
+        # Fill the columns we actually have UI for
+        row.update({
+            "locality": locality,
+            "property_type": property_type,
+            "nbr_bedrooms": nbr_bedrooms,
+            "total_area_sqm": total_area_sqm,
+            "zip_code": zip_code,
+            "fl_garden": fl_garden,
+            "garden_sqm": garden_sqm,
+        })
 
-st.markdown('</div>', unsafe_allow_html=True)
+        return pd.DataFrame([row])
+
+    if st.button("💶 Predict Price"):
+        df_input = build_input_row()
+        try:
+            prediction = model.predict(df_input)[0]
+            st.success(f"💶 Estimated price: **€ {round(prediction):,}**")
+        except Exception as e:
+            st.error(f"⚠️ Error during prediction:\n\n{e}")
+
+
+# ============================================================
+#  ABOUT PAGE
+# ============================================================
+elif page == "ℹ️ About":
+    st.title("ℹ️ About This Project")
+    st.write("""
+        This app predicts real-estate prices in Belgium using a machine learning model.
+        
+        Built with:
+        - Streamlit  
+        - Scikit-learn  
+        - Python  
+        - Immo Eliza public dataset  
+    """)
+
 
 
 
