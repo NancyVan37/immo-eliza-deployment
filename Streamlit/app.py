@@ -32,7 +32,7 @@ st.markdown(
         background-size: cover;
         background-attachment: fixed;
         background-repeat: no-repeat;
-        color: #001020;
+        color: #ffffff;
     }}
     .card {{
         background: rgba(245, 245, 240, 0.92);
