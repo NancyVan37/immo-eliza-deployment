@@ -19,7 +19,7 @@ st.set_page_config(page_title="Immo Eliza", page_icon="🏠", layout="centered")
 # ----------------------------
 # Correct relative path
 # ----------------------------
-IMAGE_PATH = "housing.jpeg"     # NOT Streamlit/housing.jpg
+IMAGE_PATH = "background.jpeg"     # NOT Streamlit/housing.jpg
 encoded_img = get_base64_image(IMAGE_PATH)
 
 # CSS with background image
@@ -52,8 +52,6 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
-
-
 
 # ----------------------------
 # Sidebar navigation
