@@ -26,21 +26,48 @@ encoded_img = get_base64_image(IMAGE_PATH)
 st.markdown(
     f"""
     <style>
+
+    /* Main app text */
     .stApp {{
         background-color: #001f3f;
         background-image: url("data:image/jpg;base64,{encoded_img}");
         background-size: cover;
         background-attachment: fixed;
         background-repeat: no-repeat;
-        color: #000000;
+        color: #000000 !important;
     }}
+
+    /* Sidebar text */
+    section[data-testid="stSidebar"] * {{
+        color: #000000 !important;
+    }}
+
+    /* All text elements */
+    .stMarkdown, .stText, .stHeader, .stSubheader, .stCaption, label, p, span, div, h1, h2, h3, h4, h5, h6 {{
+        color: #000000 !important;
+    }}
+
+    /* Card styling */
     .card {{
         background: rgba(245, 245, 240, 0.92);
-        color: #0b2545;
+        color: #000000 !important;
         padding: 18px;
         border-radius: 12px;
         box-shadow: 0 6px 18px rgba(0,0,0,0.25);
     }}
+
+    /* Input labels */
+    label {{
+        color: #000000 !important;
+        font-weight: 600;
+    }}
+
+    /* Radio buttons & checkboxes */
+    .stRadio > label, .stCheckbox > label {{
+        color: #000000 !important;
+    }}
+
+    /* Buttons */
     .stButton>button {{
         background-color: #f5c16c !important;
         color: black !important;
@@ -48,6 +75,7 @@ st.markdown(
         border-radius: 8px !important;
         padding: 8px 16px !important;
     }}
+
     </style>
     """,
     unsafe_allow_html=True,
