@@ -7,19 +7,22 @@ from pathlib import Path
 import base64
 
 def get_base64_image(image_path):
+    # SAFER: check if file exists
+    if not os.path.exists(image_path):
+        raise FileNotFoundError(f"Background image not found at: {image_path}")
     with open(image_path, "rb") as img:
         return base64.b64encode(img.read()).decode()
-
-
+    
 # Page config
 st.set_page_config(page_title="Immo Eliza", page_icon="🏠", layout="centered")
 
 # ----------------------------
-# CSS: navy background + background image + beige cards
+# Correct relative path
 # ----------------------------
-IMAGE_PATH = "Streamlit/housing.jpg"   # update to correct path
+IMAGE_PATH = "housing.jpeg"     # NOT Streamlit/housing.jpg
 encoded_img = get_base64_image(IMAGE_PATH)
 
+# CSS with background image
 st.markdown(
     f"""
     <style>
@@ -31,7 +34,6 @@ st.markdown(
         background-repeat: no-repeat;
         color: #f5f5f5;
     }}
-
     .card {{
         background: rgba(245, 245, 240, 0.92);
         color: #0b2545;
@@ -39,7 +41,6 @@ st.markdown(
         border-radius: 12px;
         box-shadow: 0 6px 18px rgba(0,0,0,0.25);
     }}
-
     .stButton>button {{
         background-color: #f5c16c !important;
         color: black !important;
@@ -51,6 +52,7 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
+
 
 
 # ----------------------------
