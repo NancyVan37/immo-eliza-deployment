@@ -17,9 +17,9 @@ def get_base64_image(image_path):
 st.set_page_config(page_title="Immo Eliza", page_icon="🏠", layout="centered")
 
 # ----------------------------
-# Correct relative path
+# Path
 # ----------------------------
-IMAGE_PATH = "Streamlit/background.jpeg"     # NOT Streamlit/housing.jpg
+IMAGE_PATH = "Streamlit/background.jpeg" 
 encoded_img = get_base64_image(IMAGE_PATH)
 
 # CSS with background image
@@ -135,7 +135,7 @@ elif page == "Predict":
     st.markdown("</div>", unsafe_allow_html=True)
 
     if st.button("🔍 Predict Price"):
-        # Build row with defaults for expected columns
+        # row with defaults for expected columns
         if EXPECTED_COLUMNS is None:
             # if we can't retrieve columns, try predict directly with minimal DF
             df_input = pd.DataFrame([{
@@ -149,7 +149,7 @@ elif page == "Predict":
             }])
         else:
             row = {c: None for c in EXPECTED_COLUMNS}
-            # fill known fields if present in EXPECTED_COLUMNS
+            #known fields if present in EXPECTED_COLUMNS
             mapping = {
                 "locality": locality,
                 "property_type": property_type,
