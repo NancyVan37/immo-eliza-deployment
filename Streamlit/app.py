@@ -1,146 +1,206 @@
+# Streamlit/app.py
 import streamlit as st
 import pandas as pd
 import joblib
+import os
+from pathlib import Path
+import base64
 
-# -----------------------------
-# Page Config (title + layout)
-# -----------------------------
-st.set_page_config(
-    page_title="Immo Eliza Price Predictor",
-    layout="centered",
+def get_base64_image(image_path):
+    with open(image_path, "rb") as img:
+        return base64.b64encode(img.read()).decode()
+
+
+# Page config
+st.set_page_config(page_title="Immo Eliza", page_icon="🏠", layout="centered")
+
+# ----------------------------
+# CSS: navy background + background image + beige cards
+# ----------------------------
+IMAGE_PATH = "Streamlit/housing.jpg"   # update to correct path
+encoded_img = get_base64_image(IMAGE_PATH)
+
+st.markdown(
+    f"""
+    <style>
+    .stApp {{
+        background-color: #001f3f;
+        background-image: url("data:image/jpg;base64,{encoded_img}");
+        background-size: cover;
+        background-attachment: fixed;
+        background-repeat: no-repeat;
+        color: #f5f5f5;
+    }}
+
+    .card {{
+        background: rgba(245, 245, 240, 0.92);
+        color: #0b2545;
+        padding: 18px;
+        border-radius: 12px;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+    }}
+
+    .stButton>button {{
+        background-color: #f5c16c !important;
+        color: black !important;
+        font-weight: 600 !important;
+        border-radius: 8px !important;
+        padding: 8px 16px !important;
+    }}
+    </style>
+    """,
+    unsafe_allow_html=True,
 )
 
-# -----------------------------
-# Custom CSS (Navy theme)
-# -----------------------------
-st.markdown("""
-<style>
 
-body {
-    background-color: #001f3f !important;
-}
+# ----------------------------
+# Sidebar navigation
+# ----------------------------
+page = st.sidebar.radio("Navigation", ["Predict", "About", "Debug"])
 
-[data-testid="stAppViewContainer"] {
-    background-color: #001f3f;
-}
+# ----------------------------
+# Utility: cached model loader (safer on deployment)
+# ----------------------------
+@st.cache_resource
+def load_model(path: str = "model.pkl"):
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"Model file not found at: {path}")
+    model = joblib.load(path)
+    return model
 
-[data-testid="stSidebar"] {
-    background-color: #001933;
-}
+# Try to load model and show friendly message if failure
+try:
+    model = load_model("model.pkl")
+except Exception as e:
+    st.sidebar.error("Model load error")
+    st.error(
+        "The model could not be loaded. Check model.pkl exists in the repository and is <=100MB.\n\n"
+        f"Error: {e}"
+    )
+    st.stop()
 
-h1, h2, h3, h4, label, p, span {
-    color: #ffffff !important;
-}
+# Helper to get expected columns from training preprocessor
+def get_expected_columns(pipeline):
+    """
+    If you saved a pipeline where preprocessor is pipeline.named_steps['preprocessor'],
+    it will expose transformers_ with column lists used at fit-time.
+    """
+    try:
+        pre = pipeline.named_steps["preprocessor"]
+        num_cols = list(pre.transformers_[0][2])
+        cat_cols = list(pre.transformers_[1][2])
+        return num_cols + cat_cols
+    except Exception:
+        # fallback: if you saved a raw model (not a pipeline)
+        return None
 
-.stButton > button {
-    background-color: #0074D9 !important;
-    color: white !important;
-    width: 100%;
-    border-radius: 10px;
-    padding: 0.6rem;
-}
+EXPECTED_COLUMNS = get_expected_columns(model)
 
-.stTextInput > div > div > input,
-.stNumberInput input {
-    background-color: #ffffff !important;
-    color: #000000 !important;
-}
-
-.stSelectbox > div > div {
-    background-color: #ffffff !important;
-    color: black !important;
-}
-
-</style>
-""", unsafe_allow_html=True)
-
-
-# -----------------------------
-# Sidebar Navigation
-# -----------------------------
-st.sidebar.title("📌 Navigation")
-page = st.sidebar.radio(
-    "Choose a page",
-    ["🏠 Home", "🔮 Predict Price", "ℹ️ About"]
-)
-
-# -----------------------------
-# Load model
-# -----------------------------
-model = joblib.load("model.pkl")
-preprocessor = model.named_steps["preprocessor"]
-
-numeric_cols = list(preprocessor.transformers_[0][2])
-categorical_cols = list(preprocessor.transformers_[1][2])
-ALL_COLUMNS = numeric_cols + categorical_cols
-
-
-# ============================================================
-#  HOME PAGE
-# ============================================================
-if page == "🏠 Home":
+# ----------------------------
+# PAGES
+# ----------------------------
+if page == "About":
+    st.markdown("<div class='card'>", unsafe_allow_html=True)
     st.title("🏠 Immo Eliza Price Predictor")
-    st.write("""
-        Welcome to the **Immo Eliza Price Predictor**.
+    st.write(
+        "This app uses a trained pipeline (preprocessor + regressor). "
+        "Fill inputs and press Predict."
+    )
+    st.markdown("</div>", unsafe_allow_html=True)
 
-        Use the sidebar to navigate to the prediction tool.
-    """)
+elif page == "Predict":
+    st.markdown("<div class='card'>", unsafe_allow_html=True)
+    st.header("Property details")
+    col1, col2 = st.columns(2)
 
+    with col1:
+        locality = st.text_input("Locality (city)", "")
+        property_type = st.selectbox("Property Type", ["APARTMENT", "HOUSE"])
+        subproperty_type = st.text_input("Subtype (optional)", "")
+        region = st.text_input("Region (optional)", "")
+        zip_code = st.number_input("Zip Code", min_value=1000, max_value=9999, value=1000, step=1)
 
-# ============================================================
-#  PREDICT PRICE PAGE
-# ============================================================
-elif page == "🔮 Predict Price":
+    with col2:
+        total_area_sqm = st.number_input("Total area (sqm)", min_value=1, max_value=10000, value=80)
+        nbr_bedrooms = st.number_input("Bedrooms", min_value=0, max_value=20, value=2)
+        garden_sqm = st.number_input("Garden size (sqm)", min_value=0, max_value=10000, value=0)
+        terrace_sqm = st.number_input("Terrace size (sqm)", min_value=0, max_value=10000, value=0)
+        epc = st.text_input("EPC (optional)", "")
 
-    st.title("🔮 Predict the Property Price")
+    fl_garden = st.checkbox("Has garden")
+    fl_terrace = st.checkbox("Has terrace")
+    fl_furnished = st.checkbox("Furnished")
+    fl_double_glazing = st.checkbox("Double glazing")
 
-    locality = st.text_input("Locality", "")
-    property_type = st.selectbox("Property Type", ["APARTMENT", "HOUSE"])
-    nbr_bedrooms = st.number_input("Number of bedrooms", 0, 20, 2)
-    total_area_sqm = st.number_input("Total area (sqm)", 10, 10000, 100)
-    zip_code = st.number_input("Zip Code", 1000, 9999, 1000)
-    fl_garden = st.checkbox("Has garden?")
-    garden_sqm = st.number_input("Garden size (sqm)", 0, 5000, 0)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    def build_input_row():
-        row = {col: None for col in ALL_COLUMNS}
+    if st.button("🔍 Predict Price"):
+        # Build row with defaults for expected columns
+        if EXPECTED_COLUMNS is None:
+            # if we can't retrieve columns, try predict directly with minimal DF
+            df_input = pd.DataFrame([{
+                "locality": locality,
+                "property_type": property_type,
+                "nbr_bedrooms": nbr_bedrooms,
+                "total_area_sqm": total_area_sqm,
+                "zip_code": zip_code,
+                "fl_garden": fl_garden,
+                "garden_sqm": garden_sqm
+            }])
+        else:
+            row = {c: None for c in EXPECTED_COLUMNS}
+            # fill known fields if present in EXPECTED_COLUMNS
+            mapping = {
+                "locality": locality,
+                "property_type": property_type,
+                "subproperty_type": subproperty_type,
+                "region": region,
+                "zip_code": zip_code,
+                "total_area_sqm": total_area_sqm,
+                "nbr_bedrooms": nbr_bedrooms,
+                "garden_sqm": garden_sqm,
+                "terrace_sqm": terrace_sqm,
+                "epc": epc,
+                "fl_garden": fl_garden,
+                "fl_terrace": fl_terrace,
+                "fl_furnished": fl_furnished,
+                "fl_double_glazing": fl_double_glazing
+            }
+            for k, v in mapping.items():
+                if k in row:
+                    row[k] = v
+            df_input = pd.DataFrame([row])
 
-        # Fill the columns we actually have UI for
-        row.update({
-            "locality": locality,
-            "property_type": property_type,
-            "nbr_bedrooms": nbr_bedrooms,
-            "total_area_sqm": total_area_sqm,
-            "zip_code": zip_code,
-            "fl_garden": fl_garden,
-            "garden_sqm": garden_sqm,
-        })
+        # Show debug info in collapsed expander
+        with st.expander("Input preview (for debugging)"):
+            st.write(df_input.T)
 
-        return pd.DataFrame([row])
-
-    if st.button("💶 Predict Price"):
-        df_input = build_input_row()
+        # Predict with try/except and helpful missing-columns message
         try:
-            prediction = model.predict(df_input)[0]
-            st.success(f"💶 Estimated price: **€ {round(prediction):,}**")
+            pred = model.predict(df_input)[0]
+            st.success(f"💶 Estimated price: € {int(round(pred)):,}")
         except Exception as e:
-            st.error(f"⚠️ Error during prediction:\n\n{e}")
+            st.error("Prediction error: the model raised an exception. See details below.")
+            st.exception(e)
+            # If expected columns available, show which are missing
+            if EXPECTED_COLUMNS is not None:
+                provided = set(df_input.columns)
+                expected = set(EXPECTED_COLUMNS)
+                missing = expected - provided
+                extra = provided - expected
+                st.write("Expected columns count:", len(expected))
+                st.write("Provided columns count:", len(provided))
+                st.write("Missing columns:", sorted(list(missing)))
+                st.write("Extra columns (provided but not expected):", sorted(list(extra)))
 
+elif page == "Debug":
+    st.header("Diagnostics")
+    st.write("App running. Model path:", Path("model.pkl").absolute())
+    st.write("Model size (bytes):", os.path.getsize("model.pkl") if os.path.exists("model.pkl") else "not found")
+    st.write("Expected columns (first 50):", EXPECTED_COLUMNS[:50] if EXPECTED_COLUMNS else "Not available")
+    st.write("Python version:", f"{os.sys.version}")
+    st.write("Streamlit version:", st.__version__)
 
-# ============================================================
-#  ABOUT PAGE
-# ============================================================
-elif page == "ℹ️ About":
-    st.title("ℹ️ About This Project")
-    st.write("""
-        This app predicts real-estate prices in Belgium using a machine learning model.
-        
-        Built with:
-        - Streamlit  
-        - Scikit-learn  
-        - Python  
-        - Immo Eliza public dataset  
-    """)
 
 
 
