@@ -19,7 +19,7 @@ st.set_page_config(page_title="Immo Eliza", page_icon="🏠", layout="centered")
 # ----------------------------
 # Path
 # ----------------------------
-IMAGE_PATH = "Streamlit/background.jpeg" 
+IMAGE_PATH = "Streamlit/background.jpg" 
 encoded_img = get_base64_image(IMAGE_PATH)
 
 # CSS with background image
